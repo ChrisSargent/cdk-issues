@@ -1,8 +1,8 @@
 import * as cdk from "@aws-cdk/core";
 import * as pipelines from "@aws-cdk/pipelines";
+import * as codebuild from "@aws-cdk/aws-codebuild";
 import * as codepipeline from "@aws-cdk/aws-codepipeline";
 import * as codepipeline_actions from "@aws-cdk/aws-codepipeline-actions";
-import * as api from "@aws-cdk/aws-apigateway";
 
 export class CdkTestStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -24,14 +24,45 @@ export class CdkTestStack extends cdk.Stack {
       oauthToken: cdk.SecretValue.secretsManager("git/ChrisSargent"),
     });
 
+    // Setup the linting action
+    const lintProject = new codebuild.PipelineProject(this, "LintProject", {
+      buildSpec: codebuild.BuildSpec.fromObject({
+        phases: {
+          pre_build: {
+            commands: ['echo "lint all the things'],
+          },
+        },
+        version: "0.2",
+      }),
+    });
+    const lintAction = new codepipeline_actions.CodeBuildAction({
+      actionName: "LintAction",
+      input: sourceOutput,
+      project: lintProject,
+      type: codepipeline_actions.CodeBuildActionType.TEST,
+    });
+
     const pipeline = new codepipeline.Pipeline(this, "Pipeline", {
+      restartExecutionOnUpdate: true,
       stages: [
         {
           actions: [sourceAction],
           stageName: "GitSource",
         },
+        {
+          actions: [lintAction],
+          stageName: "Lint",
+        },
       ],
     });
+
+    cdkInput.produceAction(
+      {
+        pipeline,
+        stageName: "Input",
+      },
+      { scope: this }
+    );
 
     const cdkPipeline = new pipelines.CodePipeline(this, "CDKPipeline", {
       codePipeline: pipeline,
@@ -55,6 +86,15 @@ class MyApplication extends cdk.Stage {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StageProps) {
     super(scope, id, props);
 
-    console.log("Nothing to deploy");
+    console.log("CDK Stage");
+    new MyStack(this, "MyStack");
+  }
+}
+
+class MyStack extends cdk.Stack {
+  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+
+    console.log("CDK Stack");
   }
 }
