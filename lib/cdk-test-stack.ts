@@ -1,14 +1,13 @@
 import * as cdk from "@aws-cdk/core";
-import * as api from "@aws-cdk/aws-apigateway";
+import * as events from '@aws-cdk/aws-events';
+
 
 export class CdkTestStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const restApi = new api.RestApi(this, "test-api", {
-      endpointExportName: "EndpointTestName",
+    new events.EventBus(this, 'MyEventBus', {
+      eventBusName: cdk.PhysicalName.GENERATE_IF_NEEDED,
     });
-
-    restApi.root.addMethod("ANY");
   }
 }
